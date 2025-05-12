@@ -33,6 +33,7 @@ class _RealmStudioManagerState extends State<RealmStudioManager> {
     _searchController.dispose();
     super.dispose();
   }
+  
 
   void _findAll() {
     if (selectedSchema.value == null) return;
@@ -48,7 +49,7 @@ class _RealmStudioManagerState extends State<RealmStudioManager> {
           try {
             item[property.name] = data.dynamic.getList(property.name);
           } catch (e) {
-            item[property.name] = data.dynamic.getMap(property.name).toEJson();
+            item[property.name] = Map.fromEntries(data.dynamic.getMap(property.name).entries);
           }
         }
       }
