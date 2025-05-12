@@ -33,23 +33,88 @@ class _RealmStudioManagerState extends State<RealmStudioManager> {
     _searchController.dispose();
     super.dispose();
   }
-  
 
   void _findAll() {
     if (selectedSchema.value == null) return;
     final schema = selectedSchema.value!;
     final results = widget.realm.dynamic.all(schema.type.toString());
 
+    // final List<Map<String, dynamic>> tempResult = results.map((data) {
+    //   final Map<String, dynamic> item = {};
+    //   for (final property in data.objectSchema) {
+    //     try {
+    //       item[property.name] = data.dynamic.get(property.name);
+    //     } catch (e) {
+    //       try {
+    //         final list =  data.dynamic.getList(property.name);
+
+    //         List<Map<String,dynamic>> mapping = [];
+
+    //         for (var it in list) {
+    //           mapping.add(it);
+    //         }
+
+    //         item[property.name] = list;
+
+    //       } catch (e) {
+    //         item[property.name] = Map.fromEntries(data.dynamic.getMap(property.name).entries);
+    //       }
+    //     }
+    //   }
+    //   return item;
+    // }).toList();
+
     final List<Map<String, dynamic>> tempResult = results.map((data) {
       final Map<String, dynamic> item = {};
-      for (final property in data.objectSchema) {
+
+      // Get all property names from the object schema
+      final propertyNames = data.objectSchema.map((p) => p.name).toList();
+
+      for (final propertyName in propertyNames) {
         try {
-          item[property.name] = data.dynamic.get(property.name);
+          // First try to get as a single value
+          item[propertyName] = data.dynamic.get(propertyName);
         } catch (e) {
           try {
-            item[property.name] = data.dynamic.getList(property.name);
+            // If that fails, try as a list
+            final realmList = data.dynamic.getList(propertyName);
+
+            // Convert RealmList to regular List
+            item[propertyName] = realmList.map((element) {
+              if (element is RealmObject) {
+                // Handle nested RealmObjects
+                final nestedMap = <String, dynamic>{};
+                final nestedProperties = element.objectSchema
+                    .map(
+                      (p) => p.name,
+                    )
+                    .toList();
+                for (final nestedProp in nestedProperties) {
+                  try {
+                    nestedMap[nestedProp] = element.dynamic.get(nestedProp);
+                  } catch (e) {
+                    try {
+                      nestedMap[nestedProp] =
+                          element.dynamic.getList(nestedProp);
+                    } catch (e) {
+                      nestedMap[nestedProp] =
+                          element.dynamic.getMap(nestedProp);
+                    }
+                  }
+                }
+                return nestedMap;
+              }
+              return element;
+            }).toList();
           } catch (e) {
-            item[property.name] = Map.fromEntries(data.dynamic.getMap(property.name).entries);
+            try {
+              // If list fails, try as a map
+              final realmMap = data.dynamic.getMap(propertyName);
+              item[propertyName] = Map.fromEntries(realmMap.entries);
+            } catch (e) {
+              // If all fail, set to null
+              item[propertyName] = null;
+            }
           }
         }
       }
