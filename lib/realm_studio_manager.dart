@@ -42,7 +42,15 @@ class _RealmStudioManagerState extends State<RealmStudioManager> {
     final List<Map<String, dynamic>> tempResult = results.map((data) {
       final Map<String, dynamic> item = {};
       for (final property in data.objectSchema) {
-        item[property.name] = data.dynamic.get(property.name);
+        try {
+          item[property.name] = data.dynamic.get(property.name);
+        } catch (e) {
+          try {
+            item[property.name] = data.dynamic.getList(property.name);
+          } catch (e) {
+            item[property.name] = data.dynamic.getMap(property.name);
+          }
+        }
       }
       return item;
     }).toList();
